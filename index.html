@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>⚔️ タップボスバトル</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Noto+Sans+JP:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #08080f;
+  --panel: #0e0e1c;
+  --border: #2a2a4a;
+  --gold: #f0b429;
+  --gold2: #ffde78;
+  --red: #e53935;
+  --red2: #ff6b6b;
+  --blue: #4fc3f7;
+  --cyan: #00e5ff;
+  --purple: #b388ff;
+  --green: #69f0ae;
+  --diamond: #89d4f5;
+  --diamond2: #c5eeff;
+  --text: #e0e0ff;
+  --muted: #6b6b9a;
+  --hp-green: #00e676;
+  --hp-yellow: #ffea00;
+  --hp-red: #ff1744;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: 'Noto Sans JP', sans-serif;
+  min-height: 100vh; overflow-x: hidden;
+  background-image:
+    radial-gradient(ellipse at 20% 50%, rgba(99,42,180,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(224,57,53,0.06) 0%, transparent 50%);
+}
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 10% 15%, rgba(255,255,255,0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 30% 45%, rgba(255,255,255,0.2) 0%, transparent 100%),
+    radial-gradient(1px 1px at 55% 25%, rgba(255,255,255,0.25) 0%, transparent 100%),
+    radial-gradient(1px 1px at 75% 60%, rgba(255,255,255,0.15) 0%, transparent 100%),
+    radial-gradient(1px 1px at 90% 10%, rgba(255,255,255,0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 45% 80%, rgba(255,255,255,0.2) 0%, transparent 100%),
+    radial-gradient(1px 1px at 65% 90%, rgba(255,255,255,0.15) 0%, transparent 100%);
+  pointer-events: none; z-index: 0;
+}
+.wrap { max-width: 480px; margin: 0 auto; padding: 12px; position: relative; z-index: 1; }
+
+/* Header */
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; background: var(--panel);
+  border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px;
+}
+.header-title {
+  font-family: 'Cinzel', serif; font-size: 16px; font-weight: 900;
+  background: linear-gradient(135deg, var(--gold), var(--gold2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: 2px;
+}
+.header-stats { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.stat-item { display: flex; align-items: center; gap: 4px; font-size: 12px; }
+.stat-val { font-weight: 700; font-size: 14px; }
+.sv-gold { color: var(--gold); }
+.sv-dia  { color: var(--diamond); }
+.sv-atk  { color: var(--red2); }
+
+/* Tabs */
+.tabs { display: flex; gap: 4px; margin-bottom: 10px; }
+.tab {
+  flex: 1; padding: 7px 4px; background: var(--panel);
+  border: 1px solid var(--border); border-radius: 8px;
+  color: var(--muted); font-family: 'Noto Sans JP', sans-serif;
+  font-size: 11px; cursor: pointer; transition: all 0.2s;
+}
+.tab.active { border-color: var(--gold); color: var(--gold); background: rgba(240,180,41,0.08); }
+.pane { display: none; }
+.pane.active { display: block; }
+
+/* Boss Panel */
+.boss-panel {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px; margin-bottom: 10px;
+  position: relative; overflow: hidden;
+}
+.boss-panel::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--red), transparent);
+}
+.boss-name-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.boss-name { font-family: 'Cinzel', serif; font-size: 16px; font-weight: 700; color: var(--red2); text-shadow: 0 0 20px rgba(255,107,107,0.4); }
+.boss-emoji { font-size: 34px; filter: drop-shadow(0 0 12px rgba(255,100,100,0.5)); }
+.hp-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+.hp-bar-track { width: 100%; height: 14px; background: rgba(255,255,255,0.05); border-radius: 7px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); }
+.hp-bar-fill { height: 100%; border-radius: 7px; transition: width 0.2s ease; background: linear-gradient(90deg, var(--hp-green), #00ff88); box-shadow: 0 0 8px rgba(0,230,118,0.5); }
+.hp-bar-fill.mid { background: linear-gradient(90deg, var(--hp-yellow), #ffe57f); box-shadow: 0 0 8px rgba(255,234,0,0.5); }
+.hp-bar-fill.low { background: linear-gradient(90deg, var(--hp-red), #ff6b6b); box-shadow: 0 0 8px rgba(255,23,68,0.6); }
+.clear-progress { display: flex; gap: 4px; margin-top: 6px; }
+.clear-pip { flex: 1; height: 4px; border-radius: 2px; background: var(--border); }
+.clear-pip.done { background: var(--gold); }
+
+/* Attack Button */
+.attack-btn {
+  width: 100%; height: 84px; font-family: 'Cinzel', serif;
+  font-size: 22px; font-weight: 900; letter-spacing: 4px;
+  background: linear-gradient(135deg, #b71c1c, #e53935, #ef5350);
+  color: white; border: none; border-radius: 12px; cursor: pointer;
+  position: relative; overflow: hidden;
+  box-shadow: 0 4px 24px rgba(229,57,53,0.35), 0 0 0 1px rgba(255,100,100,0.2);
+  transition: transform 0.08s, box-shadow 0.08s; margin-bottom: 10px;
+  -webkit-tap-highlight-color: transparent;
+}
+.attack-btn::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg,rgba(255,255,255,0.15),transparent); }
+.attack-btn:active { transform: scale(0.96); box-shadow: 0 2px 10px rgba(229,57,53,0.5); }
+.attack-btn.shake { animation: shake 0.2s; }
+@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+
+.dmg-float {
+  position: fixed; font-family: 'Cinzel', serif; font-weight: 900; font-size: 22px;
+  color: var(--gold2); text-shadow: 0 0 10px rgba(255,200,0,0.8);
+  pointer-events: none; z-index: 9999; animation: floatUp 0.9s ease-out forwards;
+}
+@keyframes floatUp { 0%{opacity:1;transform:translateY(0) scale(1)} 100%{opacity:0;transform:translateY(-70px) scale(0.7)} }
+
+/* Boss List */
+.boss-list { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+.boss-btn {
+  padding: 8px 10px; background: var(--panel); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-family: 'Noto Sans JP', sans-serif;
+  font-size: 12px; cursor: pointer; text-align: left; transition: all 0.2s; line-height: 1.5;
+}
+.boss-btn:hover:not(:disabled) { border-color: var(--red); background: rgba(229,57,53,0.08); }
+.boss-btn.active-boss { border-color: var(--red2); background: rgba(229,57,53,0.12); color: var(--red2); }
+.boss-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.boss-btn .boss-drop { font-size: 10px; color: var(--gold); margin-top: 2px; }
+.boss-btn .boss-hp-tag { font-size: 10px; color: var(--muted); }
+.extreme-tag { font-size: 9px; background: rgba(255,150,0,0.2); border: 1px solid rgba(255,150,0,0.4); color: #ffab40; padding: 1px 4px; border-radius: 3px; }
+.log-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 13px; min-height: 36px; margin-bottom: 10px; color: var(--gold2); text-align: center; }
+
+/* Gacha Type Tabs */
+.gacha-type-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+.gacha-type-tab {
+  flex: 1; padding: 9px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--panel); cursor: pointer; font-family: 'Noto Sans JP', sans-serif;
+  font-size: 13px; font-weight: 700; transition: all 0.2s; text-align: center;
+}
+.gacha-type-tab.coin-tab { color: var(--gold); }
+.gacha-type-tab.coin-tab.active { border-color: var(--gold); background: rgba(240,180,41,0.1); }
+.gacha-type-tab.dia-tab { color: var(--diamond); }
+.gacha-type-tab.dia-tab.active { border-color: var(--diamond); background: rgba(137,212,245,0.1); }
+.gacha-pane { display: none; }
+.gacha-pane.active { display: block; }
+
+/* Rate Table */
+.gacha-rates { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+.gacha-rates-title { font-size: 11px; color: var(--muted); letter-spacing: 1px; margin-bottom: 8px; text-transform: uppercase; }
+.rate-row { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; font-size: 12px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.rate-row:last-child { border-bottom: none; }
+.rate-badge { padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.rb-r   { background: rgba(79,195,247,0.15);  color: var(--blue);   border: 1px solid rgba(79,195,247,0.3); }
+.rb-sr  { background: rgba(130,177,255,0.15); color: #82b1ff;       border: 1px solid rgba(130,177,255,0.3); }
+.rb-hr  { background: rgba(179,136,255,0.15); color: var(--purple); border: 1px solid rgba(179,136,255,0.3); }
+.rb-ur  { background: rgba(255,193,7,0.15);   color: #ffd740;       border: 1px solid rgba(255,193,7,0.3); }
+.rb-lr  { background: rgba(255,100,100,0.15); color: var(--red2);   border: 1px solid rgba(255,100,100,0.3); }
+.rb-mlr { background: rgba(0,229,255,0.12);   color: var(--cyan);   border: 1px solid rgba(0,229,255,0.4); }
+.rb-glr { background: rgba(255,150,200,0.12); color: #ffb3e6;       border: 1px solid rgba(255,150,200,0.4); }
+.rb-gr  { background: rgba(255,215,0,0.15);   color: #ffe082;       border: 1px solid rgba(255,215,0,0.5); box-shadow: 0 0 6px rgba(255,200,0,0.2); }
+.rb-tr  { background: rgba(200,100,255,0.15); color: #e1bee7;       border: 1px solid rgba(200,100,255,0.5); box-shadow: 0 0 8px rgba(180,100,255,0.3); }
+
+/* Gacha Buttons */
+.gacha-btns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+.gacha-btn {
+  padding: 10px 6px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--panel); color: var(--text); font-family: 'Noto Sans JP', sans-serif;
+  font-size: 12px; cursor: pointer; transition: all 0.2s; text-align: center; line-height: 1.7;
+}
+.gacha-btn.coin-btn:hover { border-color: var(--gold); background: rgba(240,180,41,0.07); }
+.gacha-btn.coin-btn .cost { color: var(--gold); font-weight: 700; }
+.gacha-btn.dia-btn:hover { border-color: var(--diamond); background: rgba(137,212,245,0.07); }
+.gacha-btn.dia-btn .cost { color: var(--diamond); font-weight: 700; }
+.last-summary { font-size: 12px; color: var(--muted); text-align: center; padding: 8px; }
+
+/* Exchange Box */
+.exchange-box {
+  background: rgba(137,212,245,0.05); border: 1px solid rgba(137,212,245,0.2);
+  border-radius: 10px; padding: 14px; margin-bottom: 12px;
+}
+.exchange-title { font-size: 12px; color: var(--diamond); letter-spacing: 1px; margin-bottom: 10px; font-weight: 700; }
+.exchange-row { display: flex; gap: 8px; align-items: center; }
+.exchange-input {
+  flex: 1; background: rgba(0,0,0,0.4); border: 1px solid rgba(137,212,245,0.3);
+  border-radius: 7px; color: var(--text); font-family: 'Noto Sans JP', sans-serif;
+  font-size: 14px; padding: 8px 12px; outline: none; transition: border-color 0.2s;
+}
+.exchange-input:focus { border-color: var(--diamond); }
+.exchange-input::placeholder { color: var(--muted); }
+.exchange-btn {
+  padding: 8px 14px; border-radius: 7px; border: 1px solid var(--diamond);
+  background: rgba(137,212,245,0.1); color: var(--diamond);
+  font-family: 'Noto Sans JP', sans-serif; font-size: 13px; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+}
+.exchange-btn:hover { background: rgba(137,212,245,0.2); }
+.exchange-hint { font-size: 10px; color: var(--muted); margin-top: 6px; }
+
+/* Modal */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.88);
+  z-index: 1000; display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.3s; backdrop-filter: blur(6px);
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 16px;
+  padding: 20px; max-width: 400px; width: 92%; position: relative;
+  transform: scale(0.9); transition: transform 0.3s; max-height: 90vh; overflow-y: auto;
+}
+.modal-overlay.open .modal { transform: scale(1); }
+.modal-title { font-family: 'Cinzel', serif; font-size: 15px; font-weight: 700; text-align: center; margin-bottom: 14px; letter-spacing: 2px; }
+.modal-title.coin-title { color: var(--gold); }
+.modal-title.dia-title  { color: var(--diamond); }
+.result-grid { display: grid; gap: 5px; margin-bottom: 14px; }
+.result-card {
+  border-radius: 7px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center; font-weight: 700; border: 1px solid;
+  padding: 6px 3px; gap: 3px; aspect-ratio: 0.65;
+  animation: cardReveal 0.3s ease both;
+}
+@keyframes cardReveal { from{opacity:0;transform:rotateY(90deg) scale(0.8)} to{opacity:1;transform:rotateY(0) scale(1)} }
+.result-card.r   { background: rgba(79,195,247,0.1);  border-color: rgba(79,195,247,0.4);   color: var(--blue); }
+.result-card.sr  { background: rgba(130,177,255,0.1); border-color: rgba(130,177,255,0.4);  color: #82b1ff; }
+.result-card.hr  { background: rgba(179,136,255,0.15);border-color: rgba(179,136,255,0.5);  color: var(--purple); }
+.result-card.ur  { background: rgba(255,215,64,0.12); border-color: rgba(255,215,64,0.5);   color: #ffd740; }
+.result-card.lr  { background: rgba(255,100,100,0.15);border-color: rgba(255,100,100,0.5);  color: var(--red2); box-shadow: 0 0 10px rgba(255,100,100,0.25); }
+.result-card.mlr { background: rgba(0,229,255,0.1);   border-color: rgba(0,229,255,0.5);    color: var(--cyan); box-shadow: 0 0 12px rgba(0,229,255,0.3); }
+.result-card.glr { background: rgba(255,150,200,0.1); border-color: rgba(255,150,200,0.4);  color: #ffb3e6; box-shadow: 0 0 12px rgba(255,150,200,0.3); }
+.result-card.gr  { background: rgba(255,215,0,0.12);  border-color: rgba(255,215,0,0.6);    color: #ffe082; box-shadow: 0 0 14px rgba(255,200,0,0.4); }
+.result-card.tr  { background: rgba(200,100,255,0.15);border-color: rgba(200,100,255,0.6);  color: #e1bee7; animation: cardReveal 0.3s ease both, trPulse 2s infinite; }
+@keyframes trPulse { 0%,100%{box-shadow:0 0 16px rgba(180,100,255,0.4)} 50%{box-shadow:0 0 30px rgba(200,100,255,0.7)} }
+.result-summary { text-align: center; font-size: 12px; color: var(--muted); margin-bottom: 14px; line-height: 2; }
+.result-summary span { color: var(--gold2); font-weight: 700; }
+.modal-close { width: 100%; padding: 10px; border: none; border-radius: 8px; color: white; font-family: 'Cinzel', serif; font-size: 14px; letter-spacing: 2px; cursor: pointer; }
+.modal-close.coin-close { background: linear-gradient(135deg, #4a148c, #7b1fa2); }
+.modal-close.dia-close  { background: linear-gradient(135deg, #006064, #0097a7); }
+
+/* Zukan */
+.zukan-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.zukan-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+.zukan-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.zukan-count { font-size: 11px; color: var(--muted); }
+.zukan-atk { font-size: 18px; font-weight: 700; color: var(--gold); font-family: 'Cinzel', serif; }
+.zukan-atk-label { font-size: 10px; color: var(--muted); }
+.zukan-section-label { font-size: 11px; color: var(--muted); letter-spacing: 1px; padding: 8px 2px 6px; grid-column: 1/-1; border-bottom: 1px solid var(--border); margin-bottom: 2px; }
+
+/* Toast */
+.toast {
+  position: fixed; top: 16px; left: 50%;
+  transform: translateX(-50%) translateY(-80px);
+  background: var(--panel); border: 1px solid var(--gold); border-radius: 8px;
+  padding: 10px 20px; font-size: 13px; color: var(--gold2);
+  z-index: 9998; transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+  white-space: nowrap; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-title">⚔ TAP BOSS</div>
+    <div class="header-stats">
+      <div class="stat-item">⚔️ <span class="stat-val sv-atk" id="atk-val">1</span></div>
+      <div class="stat-item">🪙 <span class="stat-val sv-gold" id="coin-val">0</span></div>
+      <div class="stat-item">💎 <span class="stat-val sv-dia" id="dia-val">0</span></div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('battle')">⚔️ バトル</button>
+    <button class="tab" onclick="switchTab('gacha')">🎰 ガチャ</button>
+    <button class="tab" onclick="switchTab('zukan')">📖 図鑑</button>
+  </div>
+
+  <!-- BATTLE -->
+  <div class="pane active" id="pane-battle">
+    <div class="boss-panel">
+      <div class="boss-name-row">
+        <div>
+          <div id="no-boss-msg" style="color:var(--muted);font-size:13px;">← ボスを選択してください</div>
+          <div class="boss-name" id="boss-name" style="display:none"></div>
+        </div>
+        <div class="boss-emoji" id="boss-emoji"></div>
+      </div>
+      <div id="hp-bar-wrap" style="display:none">
+        <div class="hp-label"><span>HP</span><span id="hp-text"></span></div>
+        <div class="hp-bar-track"><div class="hp-bar-fill" id="hp-bar"></div></div>
+        <div class="clear-progress" id="clear-progress"></div>
+      </div>
+    </div>
+    <button class="attack-btn" id="attack-btn" onclick="attack(event)">ATTACK</button>
+    <div class="log-box" id="log">ボスを選択して戦闘を開始！</div>
+    <div class="boss-list" id="boss-list"></div>
+  </div>
+
+  <!-- GACHA -->
+  <div class="pane" id="pane-gacha">
+    <div class="gacha-type-tabs">
+      <button class="gacha-type-tab coin-tab active" onclick="switchGachaType('coin')">🪙 コインガチャ</button>
+      <button class="gacha-type-tab dia-tab" onclick="switchGachaType('diamond')">💎 ダイヤガチャ</button>
+    </div>
+
+    <!-- Coin Gacha -->
+    <div class="gacha-pane active" id="gpane-coin">
+      <div class="gacha-rates">
+        <div class="gacha-rates-title">📊 コインガチャ 排出確率</div>
+        <div class="rate-row"><span class="rate-badge rb-r">レア</span><span>50%</span><span style="color:var(--muted)">攻+1</span></div>
+        <div class="rate-row"><span class="rate-badge rb-sr">スーパーレア</span><span>25%</span><span style="color:var(--muted)">攻+3</span></div>
+        <div class="rate-row"><span class="rate-badge rb-hr">ハイパーレア</span><span>15%</span><span style="color:var(--muted)">攻+5</span></div>
+        <div class="rate-row"><span class="rate-badge rb-ur">ウルトラレア</span><span>8%</span><span style="color:var(--muted)">攻+10</span></div>
+        <div class="rate-row"><span class="rate-badge rb-lr">レジェンドレア</span><span>2%</span><span style="color:var(--muted)">攻+15</span></div>
+      </div>
+      <div class="gacha-btns">
+        <button class="gacha-btn coin-btn" onclick="gachaCoin(1)">🎰 単発<br><span class="cost">🪙100</span></button>
+        <button class="gacha-btn coin-btn" onclick="gachaCoin(10)">🎰 10連<br><span class="cost">🪙1,000</span></button>
+        <button class="gacha-btn coin-btn" onclick="gachaCoin(100)">🎰 100連<br><span class="cost">🪙10,000</span></button>
+      </div>
+      <div class="last-summary" id="last-coin-summary">まだガチャを引いていません</div>
+    </div>
+
+    <!-- Diamond Gacha -->
+    <div class="gacha-pane" id="gpane-diamond">
+      <div class="exchange-box">
+        <div class="exchange-title">💎 コイン → ダイヤ 変換</div>
+        <div class="exchange-row">
+          <input class="exchange-input" type="number" id="exchange-input" placeholder="変換するコイン数を入力" min="1000">
+          <button class="exchange-btn" onclick="exchangeToDiamond()">変換</button>
+        </div>
+        <div class="exchange-hint">🪙1,000 = 💎1 ／ 端数切り捨て</div>
+      </div>
+      <div class="gacha-rates">
+        <div class="gacha-rates-title">💎 ダイヤガチャ 排出確率</div>
+        <div class="rate-row"><span class="rate-badge rb-hr">ハイパーレア</span><span>40%</span><span style="color:var(--muted)">攻+100</span></div>
+        <div class="rate-row"><span class="rate-badge rb-ur">ウルトラレア</span><span>25%</span><span style="color:var(--muted)">攻+300</span></div>
+        <div class="rate-row"><span class="rate-badge rb-lr">レジェンドレア</span><span>18%</span><span style="color:var(--muted)">攻+600</span></div>
+        <div class="rate-row"><span class="rate-badge rb-mlr">★ マスターレア</span><span>10%</span><span style="color:var(--muted)">攻+1,500</span></div>
+        <div class="rate-row"><span class="rate-badge rb-glr">★★ ゴッドレア</span><span>4.5%</span><span style="color:var(--muted)">攻+5,000</span></div>
+        <div class="rate-row"><span class="rate-badge rb-gr">★★★ 神話レア</span><span>2%</span><span style="color:var(--muted)">攻+20,000</span></div>
+        <div class="rate-row"><span class="rate-badge rb-tr">★★★★ 超越レア</span><span>0.5%</span><span style="color:var(--muted)">攻+100,000</span></div>
+      </div>
+      <div class="gacha-btns">
+        <button class="gacha-btn dia-btn" onclick="gachaDiamond(1)">💎 単発<br><span class="cost">💎10</span></button>
+        <button class="gacha-btn dia-btn" onclick="gachaDiamond(10)">💎 10連<br><span class="cost">💎100</span></button>
+        <button class="gacha-btn dia-btn" onclick="gachaDiamond(100)">💎 100連<br><span class="cost">💎1,000</span></button>
+      </div>
+      <div class="last-summary" id="last-dia-summary">まだダイヤガチャを引いていません</div>
+    </div>
+  </div>
+
+  <!-- ZUKAN -->
+  <div class="pane" id="pane-zukan">
+    <div class="zukan-grid" id="zukan-grid"></div>
+  </div>
+
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="gacha-modal">
+  <div class="modal">
+    <div class="modal-title" id="modal-title"></div>
+    <div class="result-grid" id="result-grid"></div>
+    <div class="result-summary" id="result-summary"></div>
+    <button class="modal-close" id="modal-close-btn" onclick="closeModal()">CLOSE</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── BOSS DATA ── */
+const BOSSES = [
+  {name:"スライムキング",   emoji:"🟢", maxHp:100,       drop:[20,30]           },
+  {name:"ダークウルフ",     emoji:"🐺", maxHp:250,       drop:[60,80]           },
+  {name:"フレイムドラゴン", emoji:"🐉", maxHp:450,       drop:[120,160]         },
+  {name:"虚無の王",         emoji:"👁️", maxHp:800,       drop:[250,350]         },
+  {name:"アビスナイト",     emoji:"⚫", maxHp:1200,      drop:[400,500]         },
+  {name:"ヘルゴーレム",     emoji:"🪨", maxHp:1800,      drop:[600,750]         },
+  {name:"カオスビースト",   emoji:"🦁", maxHp:2600,      drop:[900,1100]        },
+  {name:"ネクロマンサー",   emoji:"💀", maxHp:3500,      drop:[1300,1600]       },
+  {name:"古代竜バハムート", emoji:"🔱", maxHp:4800,      drop:[1800,2200]       },
+  {name:"虚空の監視者",     emoji:"🌀", maxHp:6500,      drop:[2500,3000]       },
+  {name:"星喰らい",         emoji:"⭐", maxHp:8500,      drop:[3500,4200]       },
+  {name:"時空破壊者",       emoji:"⏳", maxHp:11000,     drop:[5000,6000]       },
+  {name:"終焉の神",         emoji:"☠️", maxHp:15000,     drop:[8000,10000]      },
+  {name:"創世の超越者",     emoji:"✨", maxHp:22000,     drop:[12000,15000]     },
+  {name:"奈落の破壊神",     emoji:"🕳️", maxHp:50000,     drop:[10000,15000], isExtreme:true, clearCount:0},
+  {name:"星滅竜",           emoji:"💫", maxHp:120000,    drop:[20000,30000],  isExtreme:true, clearCount:0},
+  {name:"時空喰い",         emoji:"🌌", maxHp:300000,    drop:[50000,70000],  isExtreme:true, clearCount:0},
+  {name:"深淵皇帝",         emoji:"👑", maxHp:700000,    drop:[100000,150000],isExtreme:true, clearCount:0},
+  {name:"虚空神",           emoji:"🌑", maxHp:1500000,   drop:[200000,300000],isExtreme:true, clearCount:0},
+  {name:"終焉龍",           emoji:"🔥", maxHp:3000000,   drop:[400000,600000],isExtreme:true, clearCount:0},
+  {name:"概念破壊者",       emoji:"💭", maxHp:6000000,   drop:[800000,1200000], isExtreme:true,clearCount:0},
+  {name:"無限王",           emoji:"♾️", maxHp:12000000,  drop:[1500000,2000000],isExtreme:true,clearCount:0},
+  {name:"創世災厄",         emoji:"🌋", maxHp:25000000,  drop:[3000000,4000000],isExtreme:true,clearCount:0},
+  {name:"絶対神",           emoji:"🌟", maxHp:50000000,  drop:[5000000,8000000],isExtreme:true,clearCount:0},
+];
+BOSSES.forEach((b, i) => { b.unlocked = (i === 0); });
+
+/* ── GACHA TABLES ── */
+const COIN_GACHA = [
+  {key:"r",  label:"レア",          cls:"r",  atk:1,      rate:50},
+  {key:"sr", label:"スーパーレア",  cls:"sr", atk:3,      rate:25},
+  {key:"hr", label:"ハイパーレア",  cls:"hr", atk:5,      rate:15},
+  {key:"ur", label:"ウルトラレア",  cls:"ur", atk:10,     rate:8 },
+  {key:"lr", label:"レジェンドレア",cls:"lr", atk:15,     rate:2 },
+];
+const DIA_GACHA = [
+  {key:"dhr",label:"ハイパーレア",  cls:"hr",  atk:100,   rate:40  },
+  {key:"dur",label:"ウルトラレア",  cls:"ur",  atk:300,   rate:25  },
+  {key:"dlr",label:"レジェンドレア",cls:"lr",  atk:600,   rate:18  },
+  {key:"mlr",label:"マスターレア",  cls:"mlr", atk:1500,  rate:10  },
+  {key:"glr",label:"ゴッドレア",    cls:"glr", atk:5000,  rate:4.5 },
+  {key:"gr", label:"神話レア",      cls:"gr",  atk:20000, rate:2   },
+  {key:"tr", label:"超越レア",      cls:"tr",  atk:100000,rate:0.5 },
+];
+
+/* ── STATE ── */
+let coin = 0, diamond = 0, atk = 1;
+let currentBoss = null, hp = 0;
+const zukan = {};
+[...COIN_GACHA, ...DIA_GACHA].forEach(g => zukan[g.key] = 0);
+
+/* ── TABS ── */
+function switchTab(name) {
+  ['battle','gacha','zukan'].forEach((id, i) => {
+    document.querySelectorAll('.tab')[i].classList.toggle('active', id === name);
+    document.getElementById('pane-'+id).classList.toggle('active', id === name);
+  });
+}
+function switchGachaType(type) {
+  document.querySelectorAll('.gacha-type-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.gacha-pane').forEach(p => p.classList.remove('active'));
+  const tabClass = type === 'diamond' ? 'dia-tab' : 'coin-tab';
+  document.querySelector('.' + tabClass).classList.add('active');
+  document.getElementById('gpane-' + type).classList.add('active');
+}
+
+/* ── DIAMOND EXCHANGE ── */
+function exchangeToDiamond() {
+  const inp = document.getElementById('exchange-input');
+  const amt = Math.floor(parseInt(inp.value) || 0);
+  if (amt < 1000) { showToast('🪙 最低1,000コイン必要です'); return; }
+  if (coin < amt)  { showToast('💸 コインが足りない！'); return; }
+  const gained = Math.floor(amt / 1000);
+  coin -= gained * 1000;
+  diamond += gained;
+  inp.value = '';
+  updateUI(); saveGame();
+  showToast(`💎 +${gained} ダイヤ獲得！`);
+}
+
+/* ── BOSS ── */
+function renderBossList() {
+  document.getElementById('boss-list').innerHTML = BOSSES.map((b, i) => {
+    if (!b.unlocked) return `<button class="boss-btn" disabled>🔒 ???</button>`;
+    const active = currentBoss === i ? 'active-boss' : '';
+    const ext = b.isExtreme ? `<span class="extreme-tag">3連撃破</span> ` : '';
+    return `<button class="boss-btn ${active}" onclick="selectBoss(${i})">
+      ${b.emoji} ${b.name}
+      <div class="boss-hp-tag">${ext}HP ${fmtNum(b.maxHp)}</div>
+      <div class="boss-drop">🪙${fmtNum(b.drop[0])}〜${fmtNum(b.drop[1])}</div>
+    </button>`;
+  }).join('');
+}
+function selectBoss(i) {
+  currentBoss = i; hp = BOSSES[i].maxHp;
+  updateBossPanel(); renderBossList();
+  document.getElementById('log').textContent = `${BOSSES[i].name} に挑戦！`;
+}
+function updateBossPanel() {
+  if (currentBoss === null) return;
+  const b = BOSSES[currentBoss];
+  document.getElementById('no-boss-msg').style.display = 'none';
+  const nameEl = document.getElementById('boss-name');
+  nameEl.style.display = 'block';
+  nameEl.textContent = b.emoji + ' ' + b.name;
+  document.getElementById('hp-bar-wrap').style.display = 'block';
+  const pct = Math.max(0, hp / b.maxHp * 100);
+  const bar = document.getElementById('hp-bar');
+  bar.style.width = pct + '%';
+  bar.className = 'hp-bar-fill' + (pct > 50 ? '' : pct > 25 ? ' mid' : ' low');
+  document.getElementById('hp-text').textContent = fmtNum(hp) + ' / ' + fmtNum(b.maxHp);
+  document.getElementById('clear-progress').innerHTML = b.isExtreme
+    ? [0,1,2].map(j => `<div class="clear-pip ${j < b.clearCount ? 'done' : ''}"></div>`).join('')
+    : '';
+}
+
+/* ── BATTLE ── */
+function attack() {
+  if (currentBoss === null || hp <= 0) {
+    const btn = document.getElementById('attack-btn');
+    btn.classList.add('shake');
+    setTimeout(() => btn.classList.remove('shake'), 200);
+    return;
+  }
+  hp = Math.max(0, hp - atk);
+  updateBossPanel();
+  spawnDmg('-' + fmtNum(atk));
+  if (hp === 0) {
+    const b = BOSSES[currentBoss];
+    const drop = rndInt(b.drop[0], b.drop[1]);
+    coin += drop;
+    if (b.isExtreme) {
+      b.clearCount++;
+      if (b.clearCount >= 3 && BOSSES[currentBoss+1]) {
+        BOSSES[currentBoss+1].unlocked = true;
+        showToast(`🔓 ${BOSSES[currentBoss+1].name} 解放！`);
+      }
+    } else if (BOSSES[currentBoss+1]) {
+      BOSSES[currentBoss+1].unlocked = true;
+      showToast(`🔓 ${BOSSES[currentBoss+1].name} 解放！`);
+    }
+    document.getElementById('log').textContent = `✨ ${b.name} 撃破！ 🪙 +${fmtNum(drop)}`;
+    updateUI(); renderBossList(); saveGame();
+  }
+}
+function spawnDmg(text) {
+  const el = document.createElement('div');
+  el.className = 'dmg-float'; el.textContent = text;
+  const rect = document.getElementById('attack-btn').getBoundingClientRect();
+  el.style.left = (rect.left + rect.width/2 - 30) + 'px';
+  el.style.top  = (rect.top - 10) + 'px';
+  document.body.appendChild(el);
+  el.addEventListener('animationend', () => el.remove());
+}
+
+/* ── GACHA ── */
+function rollFrom(table) {
+  const r = Math.random() * 100; let cum = 0;
+  for (const g of table) { cum += g.rate; if (r < cum) return g; }
+  return table[table.length - 1];
+}
+function gachaCoin(times) {
+  const cost = times * 100;
+  if (coin < cost) { showToast('💸 コインが足りない！'); return; }
+  coin -= cost;
+  const results = []; let totalAtk = 0;
+  for (let i = 0; i < times; i++) {
+    const g = rollFrom(COIN_GACHA);
+    results.push(g); zukan[g.key]++; atk += g.atk; totalAtk += g.atk;
+  }
+  updateUI(); updateZukan(); saveGame();
+  const counts = {}; COIN_GACHA.forEach(g => counts[g.key] = 0);
+  results.forEach(g => counts[g.key]++);
+  document.getElementById('last-coin-summary').innerHTML =
+    `前回：${COIN_GACHA.filter(g=>counts[g.key]>0).map(g=>`${g.label}×${counts[g.key]}`).join(' / ')}<br>` +
+    `攻撃力 <span style="color:var(--gold2)">+${fmtNum(totalAtk)}</span> 獲得`;
+  showGachaModal(results, totalAtk, COIN_GACHA, false);
+}
+function gachaDiamond(times) {
+  const cost = times * 10;
+  if (diamond < cost) { showToast('💎 ダイヤが足りない！'); return; }
+  diamond -= cost;
+  const results = []; let totalAtk = 0;
+  for (let i = 0; i < times; i++) {
+    const g = rollFrom(DIA_GACHA);
+    results.push(g); zukan[g.key]++; atk += g.atk; totalAtk += g.atk;
+  }
+  updateUI(); updateZukan(); saveGame();
+  const counts = {}; DIA_GACHA.forEach(g => counts[g.key] = 0);
+  results.forEach(g => counts[g.key]++);
+  document.getElementById('last-dia-summary').innerHTML =
+    `前回：${DIA_GACHA.filter(g=>counts[g.key]>0).map(g=>`${g.label}×${counts[g.key]}`).join(' / ')}<br>` +
+    `攻撃力 <span style="color:var(--diamond2)">+${fmtNum(totalAtk)}</span> 獲得`;
+  showGachaModal(results, totalAtk, DIA_GACHA, true);
+}
+function showGachaModal(results, totalAtk, table, isDiamond) {
+  const grid = document.getElementById('result-grid');
+  const title = document.getElementById('modal-title');
+  const closeBtn = document.getElementById('modal-close-btn');
+  title.textContent = isDiamond ? '💎 DIAMOND GACHA RESULT' : '🎰 COIN GACHA RESULT';
+  title.className = 'modal-title ' + (isDiamond ? 'dia-title' : 'coin-title');
+  closeBtn.className = 'modal-close ' + (isDiamond ? 'dia-close' : 'coin-close');
+
+  if (results.length <= 10) {
+    grid.style.gridTemplateColumns = results.length === 1 ? '120px' : 'repeat(5, 1fr)';
+    grid.style.justifyContent = results.length === 1 ? 'center' : '';
+    grid.innerHTML = results.map((g, i) =>
+      `<div class="result-card ${g.cls}" style="animation-delay:${i*0.05}s;font-size:${results.length===1?'13':'9'}px">
+        <div style="font-size:${results.length===1?'28':'14'}px">${isDiamond?'💎':'⚔️'}</div>
+        <div>${g.label}</div>
+        <div style="color:var(--gold)">+${fmtNum(g.atk)}</div>
+      </div>`).join('');
+  } else {
+    grid.style.gridTemplateColumns = 'repeat(4, 1fr)';
+    grid.style.justifyContent = '';
+    const counts = {}; results.forEach(g => counts[g.key] = (counts[g.key]||0)+1);
+    grid.innerHTML = table.map((g, i) =>
+      `<div class="result-card ${g.cls}" style="animation-delay:${i*0.07}s;aspect-ratio:0.8;font-size:10px">
+        <div style="font-size:16px">×${counts[g.key]||0}</div>
+        <div>${g.label}</div>
+        <div style="color:var(--gold);font-size:9px">+${fmtNum((counts[g.key]||0)*g.atk)}</div>
+      </div>`).join('');
+  }
+  document.getElementById('result-summary').innerHTML =
+    `合計攻撃力 <span>+${fmtNum(totalAtk)}</span> 獲得<br>現在の攻撃力: <span>${fmtNum(atk)}</span>`;
+  document.getElementById('gacha-modal').classList.add('open');
+}
+function closeModal() { document.getElementById('gacha-modal').classList.remove('open'); }
+
+/* ── ZUKAN ── */
+function updateZukan() {
+  const el = document.getElementById('zukan-grid');
+  let html = `<div class="zukan-section-label">🪙 コインガチャ</div>`;
+  html += COIN_GACHA.map(g => {
+    const cnt = zukan[g.key] || 0;
+    return `<div class="zukan-card">
+      <div class="zukan-card-header"><span class="rate-badge rb-${g.cls}">${g.label}</span><span class="zukan-count">×${cnt}</span></div>
+      <div class="zukan-atk">${fmtNum(cnt * g.atk)}</div>
+      <div class="zukan-atk-label">累計攻撃力</div>
+    </div>`;
+  }).join('');
+  html += `<div class="zukan-section-label">💎 ダイヤガチャ</div>`;
+  html += DIA_GACHA.map(g => {
+    const cnt = zukan[g.key] || 0;
+    return `<div class="zukan-card">
+      <div class="zukan-card-header"><span class="rate-badge rb-${g.cls}">${g.label}</span><span class="zukan-count">×${cnt}</span></div>
+      <div class="zukan-atk">${fmtNum(cnt * g.atk)}</div>
+      <div class="zukan-atk-label">累計攻撃力</div>
+    </div>`;
+  }).join('');
+  el.innerHTML = html;
+}
+
+/* ── UI ── */
+function updateUI() {
+  document.getElementById('atk-val').textContent  = fmtNum(atk);
+  document.getElementById('coin-val').textContent = fmtNum(coin);
+  document.getElementById('dia-val').textContent  = fmtNum(diamond);
+}
+function fmtNum(n) {
+  n = Math.floor(n);
+  if (n >= 1e12) return (n/1e12).toFixed(2)+'T';
+  if (n >= 1e9)  return (n/1e9).toFixed(2)+'B';
+  if (n >= 1e6)  return (n/1e6).toFixed(2)+'M';
+  if (n >= 1e4)  return (n/1e3).toFixed(1)+'K';
+  return n.toLocaleString();
+}
+function rndInt(a, b) { return Math.floor(Math.random()*(b-a+1))+a; }
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
+}
+
+/* ── SAVE / LOAD ── */
+function saveGame() {
+  try {
+    localStorage.setItem('tapBossV3', JSON.stringify({
+      coin, diamond, atk,
+      bosses: BOSSES.map(b => ({unlocked: b.unlocked, clearCount: b.clearCount||0})),
+      zukan
+    }));
+  } catch(e) {}
+}
+function loadGame() {
+  try {
+    const raw = localStorage.getItem('tapBossV3');
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    coin = d.coin ?? 0; diamond = d.diamond ?? 0; atk = d.atk ?? 1;
+    d.bosses?.forEach((b, i) => {
+      if (!BOSSES[i]) return;
+      BOSSES[i].unlocked = b.unlocked;
+      if (BOSSES[i].isExtreme) BOSSES[i].clearCount = b.clearCount || 0;
+    });
+    Object.keys(d.zukan || {}).forEach(k => { if (k in zukan) zukan[k] = d.zukan[k]; });
+  } catch(e) {}
+}
+
+/* ── INIT ── */
+loadGame();
+updateUI();
+renderBossList();
+updateZukan();
+</script>
+</body>
+</html>
